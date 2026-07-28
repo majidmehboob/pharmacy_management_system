@@ -188,8 +188,7 @@ void main() {
       expect(fetchedSale.items.length, 1);
       expect(fetchedSale.items[0].quantity, 5);
 
-      // Cleanup
-      await dbHelper.deleteMedicine('med-s-1');
+      // Verification complete; table cleanup is handled automatically in setUp
     });
   });
 }

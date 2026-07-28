@@ -6,6 +6,47 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../models/medicine_model.dart';
 import '../models/prescription_model.dart';
 import '../models/sale_model.dart';
+import '../models/user_model.dart';
+
+class ActivityLog {
+  final String id;
+  final String userName;
+  final String userRole;
+  final String action;
+  final String? details;
+  final String timestamp;
+
+  ActivityLog({
+    required this.id,
+    required this.userName,
+    required this.userRole,
+    required this.action,
+    this.details,
+    required this.timestamp,
+  });
+
+  factory ActivityLog.fromJson(Map<String, dynamic> json) {
+    return ActivityLog(
+      id: json['id'] as String,
+      userName: json['user_name'] as String,
+      userRole: json['user_role'] as String? ?? 'User',
+      action: json['action'] as String,
+      details: json['details'] as String?,
+      timestamp: json['timestamp'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'user_name': userName,
+      'user_role': userRole,
+      'action': action,
+      'details': details,
+      'timestamp': timestamp,
+    };
+  }
+}
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -20,31 +61,53 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDB(String filePath) async {
-    // If running on Desktop (Windows or Linux), initialize FFI
     if (Platform.isWindows || Platform.isLinux) {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
     }
 
-    final dbPath = await getApplicationDocumentsDirectory();
-    final path = join(dbPath.path, 'pharmacy_system', filePath);
-    
-    // Ensure parent directory exists
-    final file = File(path);
-    if (!await file.parent.exists()) {
-      await file.parent.create(recursive: true);
+    String dbDirPath;
+    try {
+      final docsDir = await getApplicationDocumentsDirectory();
+      dbDirPath = join(docsDir.path, 'pharmacy_system');
+    } catch (_) {
+      final tempDir = Directory.systemTemp;
+      dbDirPath = join(tempDir.path, 'pharmacy_system');
     }
+
+    final dbDir = Directory(dbDirPath);
+    try {
+      if (!dbDir.existsSync()) {
+        dbDir.createSync(recursive: true);
+      }
+    } catch (_) {
+      // Fallback to system temp directory if Documents directory is write-restricted
+      final fallbackDir = Directory(join(Directory.systemTemp.path, 'pharmacy_system'));
+      if (!fallbackDir.existsSync()) {
+        fallbackDir.createSync(recursive: true);
+      }
+      dbDirPath = fallbackDir.path;
+    }
+
+    final path = join(dbDirPath, filePath);
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _onUpgrade,
       onConfigure: _onConfigure,
     );
   }
 
   Future _onConfigure(Database db) async {
     await db.execute('PRAGMA foreign_keys = ON');
+  }
+
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await _createUsersAndLogsTables(db);
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -139,6 +202,8 @@ class DatabaseHelper {
       )
     ''');
 
+    await _createUsersAndLogsTables(db);
+
     // Indexes
     await db.execute('CREATE INDEX idx_medicines_name ON medicines(name)');
     await db.execute('CREATE INDEX idx_prescriptions_number ON prescriptions(prescription_number)');
@@ -146,21 +211,127 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_sales_date ON sales(sale_date)');
   }
 
-  // --- Transactions ---
-  Transaction? _activeTransaction;
+  Future _createUsersAndLogsTables(Database db) async {
+    // 6. Users Table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        name TEXT NOT NULL,
+        role TEXT NOT NULL,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT
+      )
+    ''');
 
-  Future<void> beginTransaction() async {
-    // Note: sqflite supports nested transactions or batch internally.
-    // For standard manual control, we run db.transaction() but sqflite usually
-    // wraps transaction callbacks. We'll implement helper callbacks, or use the db object.
+    // 7. Activity Logs Table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS activity_logs (
+        id TEXT PRIMARY KEY,
+        user_name TEXT NOT NULL,
+        user_role TEXT NOT NULL,
+        action TEXT NOT NULL,
+        details TEXT,
+        timestamp TEXT NOT NULL
+      )
+    ''');
+
+    // Seed default admin user if missing
+    final users = await db.query('users', where: 'username = ?', whereArgs: ['admin']);
+    if (users.isEmpty) {
+      await db.insert('users', {
+        'id': 'u-admin-1',
+        'username': 'admin',
+        'password': 'admin',
+        'name': 'System Admin',
+        'role': 'Admin',
+        'is_active': 1,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      await db.insert('users', {
+        'id': 'u-pharm-1',
+        'username': 'pharmacist',
+        'password': 'pharmacist',
+        'name': 'Lead Pharmacist',
+        'role': 'Pharmacist',
+        'is_active': 1,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      await db.insert('users', {
+        'id': 'u-cashier-1',
+        'username': 'cashier',
+        'password': 'cashier',
+        'name': 'POS Cashier',
+        'role': 'Cashier',
+        'is_active': 1,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    }
   }
 
-  Future<void> commitTransaction() async {
-    // Handled automatically by sqflite when the transaction block completes successfully.
+  // --- USERS CRUD ---
+
+  Future<List<UserModel>> getUsers() async {
+    final db = await instance.database;
+    final result = await db.query('users', orderBy: 'name ASC');
+    return result.map((j) => UserModel.fromJson(j)).toList();
   }
 
-  Future<void> rollbackTransaction() async {
-    // Handled automatically by throwing an exception inside sqflite transaction blocks.
+  Future<int> insertUser(UserModel user, String password) async {
+    final db = await instance.database;
+    final map = user.toJson();
+    map['password'] = password;
+    map['created_at'] = DateTime.now().toIso8601String();
+    return await db.insert('users', map, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<int> updateUser(UserModel user, {String? newPassword}) async {
+    final db = await instance.database;
+    final map = user.toJson();
+    if (newPassword != null && newPassword.isNotEmpty) {
+      map['password'] = newPassword;
+    }
+    return await db.update('users', map, where: 'id = ?', whereArgs: [user.id]);
+  }
+
+  Future<int> deleteUser(String id) async {
+    final db = await instance.database;
+    return await db.delete('users', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<Map<String, dynamic>?> authenticateUser(String username, String password) async {
+    final db = await instance.database;
+    final res = await db.query(
+      'users',
+      where: 'LOWER(username) = LOWER(?) AND password = ? AND is_active = 1',
+      whereArgs: [username.trim(), password.trim()],
+    );
+    if (res.isNotEmpty) {
+      return res.first;
+    }
+    return null;
+  }
+
+  // --- ACTIVITY LOGS ---
+
+  Future<int> logActivity(String userName, String userRole, String action, {String? details}) async {
+    final db = await instance.database;
+    final log = ActivityLog(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      userName: userName,
+      userRole: userRole,
+      action: action,
+      details: details,
+      timestamp: DateTime.now().toIso8601String(),
+    );
+    return await db.insert('activity_logs', log.toJson());
+  }
+
+  Future<List<ActivityLog>> getActivityLogs({int limit = 50}) async {
+    final db = await instance.database;
+    final res = await db.query('activity_logs', orderBy: 'timestamp DESC', limit: limit);
+    return res.map((j) => ActivityLog.fromJson(j)).toList();
   }
 
   // --- MEDICINES CRUD ---
@@ -260,7 +431,6 @@ class DatabaseHelper {
         whereArgs: [prescription.id],
       );
       
-      // Delete old items and insert new ones
       await txn.delete('prescription_items', where: 'prescription_id = ?', whereArgs: [prescription.id]);
       for (final item in prescription.items) {
         await txn.insert('prescription_items', item.toJson());
@@ -321,14 +491,12 @@ class DatabaseHelper {
       final res = await txn.insert('sales', sale.toJson());
       for (final item in sale.items) {
         await txn.insert('sales_items', item.toJson());
-        // Deduct inventory stock
         await txn.execute(
           'UPDATE medicines SET current_stock = current_stock - ? WHERE id = ?',
           [item.quantity, item.medicineId],
         );
       }
       
-      // If sale has a prescription_id associated, change the prescription status to 'completed'
       if (sale.prescriptionId != null && sale.prescriptionId!.isNotEmpty) {
         await txn.update(
           'prescriptions',
@@ -438,6 +606,7 @@ class DatabaseHelper {
     final db = await _database;
     if (db != null) {
       await db.close();
+      _database = null;
     }
   }
 }
