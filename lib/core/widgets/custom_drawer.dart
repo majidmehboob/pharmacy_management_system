@@ -4,8 +4,8 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
+import '../../features/auth/providers/auth_provider.dart';
 
-// Collapsed state provider
 final sidebarCollapsedProvider = StateProvider<bool>((ref) => false);
 
 class CustomDrawer extends ConsumerWidget {
@@ -16,6 +16,11 @@ class CustomDrawer extends ConsumerWidget {
     final isCollapsed = ref.watch(sidebarCollapsedProvider);
     final GoRouterState routerState = GoRouterState.of(context);
     final currentRoute = routerState.matchedLocation;
+
+    // Read current user role
+    final authState = ref.watch(authProvider);
+    final user = authState.user;
+    final isAdmin = user?.role == 'Admin';
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -32,7 +37,7 @@ class CustomDrawer extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          // Header / Logo area
+          // Header / Logo
           Container(
             padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 12),
             child: Row(
@@ -63,7 +68,8 @@ class CustomDrawer extends ConsumerWidget {
           ),
           const Divider(color: Colors.white12, height: 1),
           const SizedBox(height: 16),
-          // Navigation Items
+          
+          // Navigation Links
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -100,26 +106,31 @@ class CustomDrawer extends ConsumerWidget {
                   currentRoute: currentRoute,
                   isCollapsed: isCollapsed,
                 ),
-                _buildMenuItem(
-                  context: context,
-                  icon: FontAwesomeIcons.chartSimple,
-                  label: 'Reports',
-                  route: '/reports',
-                  currentRoute: currentRoute,
-                  isCollapsed: isCollapsed,
-                ),
-                _buildMenuItem(
-                  context: context,
-                  icon: FontAwesomeIcons.gear,
-                  label: 'Settings',
-                  route: '/settings',
-                  currentRoute: currentRoute,
-                  isCollapsed: isCollapsed,
-                ),
+                // Only show Reports to Admin users
+                if (isAdmin)
+                  _buildMenuItem(
+                    context: context,
+                    icon: FontAwesomeIcons.chartSimple,
+                    label: 'Reports',
+                    route: '/reports',
+                    currentRoute: currentRoute,
+                    isCollapsed: isCollapsed,
+                  ),
+                // Only show Settings to Admin users
+                if (isAdmin)
+                  _buildMenuItem(
+                    context: context,
+                    icon: FontAwesomeIcons.gear,
+                    label: 'Settings',
+                    route: '/settings',
+                    currentRoute: currentRoute,
+                    isCollapsed: isCollapsed,
+                  ),
               ],
             ),
           ),
-          // Collapse Toggle Button
+          
+          // Collapse Toggle
           const Divider(color: Colors.white12, height: 1),
           InkWell(
             onTap: () {
@@ -148,7 +159,6 @@ class CustomDrawer extends ConsumerWidget {
     required String currentRoute,
     required bool isCollapsed,
   }) {
-    // Exact or prefix match for routes (e.g. /inventory/add matches /inventory)
     final bool isSelected = currentRoute == route || 
         (route != '/dashboard' && route != '/reports' && route != '/settings' && currentRoute.startsWith(route));
 

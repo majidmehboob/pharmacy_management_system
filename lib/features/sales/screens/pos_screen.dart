@@ -584,7 +584,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(
                   labelText: 'Amount Tendered *',
-                  prefixText: '${'Hello'}',
+                  prefixText: '',
                 ),
                 validator: (val) {
                   final t = double.tryParse(val ?? '');
