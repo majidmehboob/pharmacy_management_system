@@ -43,6 +43,7 @@ dependencies:
   uuid: ^4.6.0
   sqflite_common_ffi: ^2.4.0+3
   sqlite3_flutter_libs: ^0.6.0+eol
+  flutter_thermal_printer: ^2.0.1
 
 dev_dependencies:
   flutter_test:

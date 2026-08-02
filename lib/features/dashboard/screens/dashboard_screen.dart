@@ -7,6 +7,7 @@ import '../../../app/theme.dart';
 import '../../../app/providers.dart';
 import '../../../core/models/medicine_model.dart';
 import '../../../core/models/sale_model.dart';
+import '../../../utils/helpers.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -112,7 +113,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       children: [
                         _buildStatCard('Total Medicines', totalMedicines.toString(), FontAwesomeIcons.pills, AppColors.primary, constraints.maxWidth / 2 - 12),
                         _buildStatCard('Low Stock Alerts', lowStockCount.toString(), FontAwesomeIcons.triangleExclamation, AppColors.warning, constraints.maxWidth / 2 - 12),
-                        _buildStatCard("Today's Sales", '\$${_todaySalesAmount.toStringAsFixed(2)}', FontAwesomeIcons.dollarSign, AppColors.success, constraints.maxWidth / 2 - 12),
+                        _buildStatCard("Today's Sales", Helpers.formatCurrency(_todaySalesAmount), FontAwesomeIcons.rupeeSign, AppColors.success, constraints.maxWidth / 2 - 12),
                         _buildStatCard('Pending Prescriptions', pendingRxCount.toString(), FontAwesomeIcons.filePrescription, AppColors.accent, constraints.maxWidth / 2 - 12),
                       ],
                     );
@@ -122,7 +123,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     children: [
                       _buildStatCard('Total Medicines', totalMedicines.toString(), FontAwesomeIcons.pills, AppColors.primary, cardWidth),
                       _buildStatCard('Low Stock Alerts', lowStockCount.toString(), FontAwesomeIcons.triangleExclamation, AppColors.warning, cardWidth),
-                      _buildStatCard("Today's Sales", '\$${_todaySalesAmount.toStringAsFixed(2)}', FontAwesomeIcons.dollarSign, AppColors.success, cardWidth),
+                      _buildStatCard("Today's Sales", Helpers.formatCurrency(_todaySalesAmount), FontAwesomeIcons.rupeeSign, AppColors.success, cardWidth),
                       _buildStatCard('Pending Prescriptions', pendingRxCount.toString(), FontAwesomeIcons.filePrescription, AppColors.accent, cardWidth),
                     ],
                   );
@@ -294,7 +295,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           ),
                         ),
                         DataCell(Text(sale.customerName ?? 'Walk-in')),
-                        DataCell(Text('\$${sale.netAmount.toStringAsFixed(2)}')),
+                        DataCell(Text(Helpers.formatCurrency(sale.netAmount))),
                         DataCell(Text(formattedDate)),
                         DataCell(
                           Container(

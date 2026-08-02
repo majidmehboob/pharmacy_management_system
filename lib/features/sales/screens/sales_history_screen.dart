@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../app/theme.dart';
 import '../../../app/providers.dart';
 import '../../../core/models/sale_model.dart';
+import '../../../utils/helpers.dart';
 
 class SalesHistoryScreen extends ConsumerStatefulWidget {
   const SalesHistoryScreen({super.key});
@@ -235,7 +236,7 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
                                               DataCell(Text(sale.customerName ?? 'Walk-in')),
                                               DataCell(Text(formattedDate)),
                                               DataCell(Text(sale.items.length.toString())),
-                                              DataCell(Text('\$${sale.netAmount.toStringAsFixed(2)}')),
+                                              DataCell(Text(Helpers.formatCurrency(sale.netAmount))),
                                               DataCell(Text(sale.paymentMethod)),
                                               DataCell(
                                                 Container(

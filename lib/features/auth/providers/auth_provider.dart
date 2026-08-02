@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../../../core/database/database_helper.dart';
@@ -34,13 +36,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier(this._dbHelper)
       : super(
           AuthState(
-            user: UserModel(
-              id: 'u-admin-1',
-              username: 'admin',
-              name: 'System Admin',
-              role: 'Admin',
-            ),
-            isAuthenticated: true,
+            user: null,
+            isAuthenticated: false,
           ),
         );
 
@@ -54,9 +51,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
 
     try {
-      // 1. Authenticate against database users table
+      // Authenticate against database users table
       final userMap = await _dbHelper.authenticateUser(u, p);
-
       if (userMap != null) {
         final userModel = UserModel.fromJson(userMap);
         state = AuthState(
@@ -69,33 +65,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return true;
       }
 
-      // 2. Fallback check for initial admin/admin default if db is fresh
-      if (u.toLowerCase() == 'admin' && p == 'admin') {
-        final adminModel = UserModel(
-          id: 'u-admin-1',
-          username: 'admin',
-          name: 'System Admin',
-          role: 'Admin',
-        );
-        state = AuthState(user: adminModel, isAuthenticated: true);
-        return true;
-      }
-
       state = state.copyWith(errorMessage: 'Invalid username or password.');
       return false;
     } catch (e) {
-      // Hardcoded fallback safety if database is initializing
-      if (u.toLowerCase() == 'admin' && p == 'admin') {
-        final adminModel = UserModel(
-          id: 'u-admin-1',
-          username: 'admin',
-          name: 'System Admin',
-          role: 'Admin',
-        );
-        state = AuthState(user: adminModel, isAuthenticated: true);
-        return true;
-      }
-
       state = state.copyWith(errorMessage: 'Authentication error: ${e.toString()}');
       return false;
     }

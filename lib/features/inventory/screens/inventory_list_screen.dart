@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../app/theme.dart';
 import '../../../app/providers.dart';
 import '../../../core/models/medicine_model.dart';
+import '../../../utils/helpers.dart';
 
 class InventoryListScreen extends ConsumerStatefulWidget {
   const InventoryListScreen({super.key});
@@ -221,7 +222,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                                               ),
                                             ),
                                           ),
-                                          DataCell(Text('\$${med.sellingPrice.toStringAsFixed(2)}')),
+                                          DataCell(Text(Helpers.formatCurrency(med.sellingPrice))),
                                           DataCell(Text(med.expiryDate ?? 'N/A')),
                                           DataCell(
                                             Container(

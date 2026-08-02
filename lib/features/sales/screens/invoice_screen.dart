@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../app/theme.dart';
 import '../../../app/providers.dart';
 import '../../../core/models/sale_model.dart';
+import '../../../utils/helpers.dart';
 
 class InvoiceScreen extends ConsumerStatefulWidget {
   final String saleId;
@@ -33,13 +34,37 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
         _sale = sale;
         _isLoading = false;
       });
+
+      // Auto-print if enabled in settings
+      final printerState = ref.read(printerProvider);
+      if (printerState.autoPrint && printerState.connectionType != 'None' && sale != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _handlePrint();
+        });
+      }
     }
   }
 
-  void _handlePrint() {
+  void _handlePrint() async {
+    if (_sale == null) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Invoice sent to printing service...')),
+      const SnackBar(content: Text('Connecting to printer and sending data...')),
     );
+
+    final success = await ref.read(printerProvider.notifier).printReceipt(_sale!);
+    if (mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Receipt printed successfully!'), backgroundColor: AppColors.success),
+        );
+      } else {
+        final err = ref.read(printerProvider).error ?? 'Unknown error';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Printing failed: $err'), backgroundColor: AppColors.danger),
+        );
+      }
+    }
   }
 
   @override
@@ -223,11 +248,11 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
                                   ),
                                   Expanded(
                                     flex: 1,
-                                    child: Text('\$${item.unitPrice.toStringAsFixed(2)}', textAlign: TextAlign.end),
+                                     child: Text(Helpers.formatCurrency(item.unitPrice), textAlign: TextAlign.end),
                                   ),
                                   Expanded(
                                     flex: 1,
-                                    child: Text('\$${item.totalPrice.toStringAsFixed(2)}', textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                     child: Text(Helpers.formatCurrency(item.totalPrice), textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.bold)),
                                   ),
                                 ],
                               ),
@@ -240,16 +265,16 @@ class _InvoiceScreenState extends ConsumerState<InvoiceScreen> {
                       const SizedBox(height: 12),
 
                       // Receipt calculation Summary
-                      _buildSummaryRow('Subtotal:', '\$${sale.totalAmount.toStringAsFixed(2)}'),
-                      _buildSummaryRow('Discount (${sale.discount.toStringAsFixed(0)}%):', '-\$${discountVal.toStringAsFixed(2)}'),
-                      _buildSummaryRow('Tax (${sale.tax.toStringAsFixed(0)}%):', '+\$${taxVal.toStringAsFixed(2)}'),
+                       _buildSummaryRow('Subtotal:', Helpers.formatCurrency(sale.totalAmount)),
+                       _buildSummaryRow('Discount (${sale.discount.toStringAsFixed(0)}%):', '-${Helpers.formatCurrency(discountVal)}'),
+                       _buildSummaryRow('Tax (${sale.tax.toStringAsFixed(0)}%):', '+${Helpers.formatCurrency(taxVal)}'),
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8),
                         child: DottedLine(),
                       ),
                       _buildSummaryRow(
                         'Net Total:', 
-                        '\$${sale.netAmount.toStringAsFixed(2)}', 
+                        Helpers.formatCurrency(sale.netAmount), 
                         isBold: true,
                         fontSize: 16,
                         textColor: AppColors.primary

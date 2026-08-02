@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -57,6 +58,13 @@ class DatabaseHelper {
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDB('pharmacy.db');
+    await _database!.execute('''
+      CREATE TABLE IF NOT EXISTS system_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT
+      )
+    ''');
+    await _createUsersAndLogsTables(_database!);
     return _database!;
   }
 
@@ -600,6 +608,29 @@ class DatabaseHelper {
       items.add(SaleItem.fromJson(itemJson, medicine: medicine));
     }
     return items;
+  }
+
+  Future<int> saveSetting(String key, String value) async {
+    final db = await database;
+    return await db.insert(
+      'system_settings',
+      {'key': key, 'value': value},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<String?> getSetting(String key) async {
+    final db = await database;
+    final maps = await db.query(
+      'system_settings',
+      columns: ['value'],
+      where: 'key = ?',
+      whereArgs: [key],
+    );
+    if (maps.isNotEmpty) {
+      return maps.first['value'] as String?;
+    }
+    return null;
   }
 
   Future<void> close() async {

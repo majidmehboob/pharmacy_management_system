@@ -7,6 +7,7 @@ import '../../../app/providers.dart';
 import '../../../core/models/medicine_model.dart';
 import '../../../core/models/prescription_model.dart';
 import '../../../core/models/sale_model.dart';
+import '../../../utils/helpers.dart';
 
 class PosScreen extends ConsumerStatefulWidget {
   const PosScreen({super.key});
@@ -221,10 +222,10 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                     Column(
                                       crossAxisAlignment: CrossAxisAlignment.end,
                                       children: [
-                                        Text(
-                                          '\$${med.sellingPrice.toStringAsFixed(2)}',
-                                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 14),
-                                        ),
+                                          Text(
+                                            Helpers.formatCurrency(med.sellingPrice),
+                                            style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 14),
+                                          ),
                                         Text(
                                           isOutOfStock ? 'Out of Stock' : 'Stock: ${med.currentStock}',
                                           style: TextStyle(
@@ -359,7 +360,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(item.medicine.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                          Text('\$${item.unitPrice.toStringAsFixed(2)} each', style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                                           Text('${Helpers.formatCurrency(item.unitPrice)} each', style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
                                         ],
                                       ),
                                     ),
@@ -392,7 +393,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                                     ),
                                     
                                     Text(
-                                      '\$${item.totalPrice.toStringAsFixed(2)}',
+                                      Helpers.formatCurrency(item.totalPrice),
                                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                                     ),
                                     IconButton(
@@ -414,7 +415,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Subtotal:'),
-                        Text('\$${cartState.subtotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                         Text(Helpers.formatCurrency(cartState.subtotal), style: const TextStyle(fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
@@ -470,7 +471,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Net Total:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                        Text('\$${cartState.netTotal.toStringAsFixed(2)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                         Text(Helpers.formatCurrency(cartState.netTotal), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
                       ],
                     ),
                   ),
@@ -551,10 +552,10 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Net Amount: \$${widget.netTotal.toStringAsFixed(2)}',
+             Text(
+              'Net Amount: ${Helpers.formatCurrency(widget.netTotal)}',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
-            ),
+             ),
             const SizedBox(height: 16),
             
             // Payment Method dropdown
@@ -594,7 +595,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Change Return: \$${_change.toStringAsFixed(2)}',
+                'Change Return: ${Helpers.formatCurrency(_change)}',
                 style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.success),
               ),
             ],

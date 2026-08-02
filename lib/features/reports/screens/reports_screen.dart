@@ -7,6 +7,7 @@ import '../../../app/providers.dart';
 import '../../../core/models/medicine_model.dart';
 import '../../../core/models/prescription_model.dart';
 import '../../../core/models/sale_model.dart';
+import '../../../utils/helpers.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -187,10 +188,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildMetricCard('Total Revenue', '\$${totalRevenue.toStringAsFixed(2)}', FontAwesomeIcons.chartLine, AppColors.success, cardWidth),
+                    _buildMetricCard('Total Revenue', Helpers.formatCurrency(totalRevenue), FontAwesomeIcons.chartLine, AppColors.success, cardWidth),
                     _buildMetricCard('Total Transactions', totalTransactions.toString(), FontAwesomeIcons.receipt, AppColors.primary, cardWidth),
-                    _buildMetricCard('Inventory Value', '\$${totalStockValue.toStringAsFixed(2)}', FontAwesomeIcons.boxesStacked, AppColors.secondary, cardWidth),
-                    _buildMetricCard('Avg Order Value', '\$${avgOrderValue.toStringAsFixed(2)}', FontAwesomeIcons.scaleBalanced, AppColors.accent, cardWidth),
+                    _buildMetricCard('Inventory Value', Helpers.formatCurrency(totalStockValue), FontAwesomeIcons.boxesStacked, AppColors.secondary, cardWidth),
+                    _buildMetricCard('Avg Order Value', Helpers.formatCurrency(avgOrderValue), FontAwesomeIcons.scaleBalanced, AppColors.accent, cardWidth),
                   ],
                 );
               },
